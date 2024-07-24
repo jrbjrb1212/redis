@@ -3,6 +3,6 @@ project(redis)
 
 file(GLOB_RECURSE SOURCE_FILES src/*.cpp src/*.hpp)
 
-add_executable(server ${SOURCE_FILES})
+set(CMAKE_CXX_STANDARD 20) # Enable the C++23 standard
 
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+add_executable(server ${SOURCE_FILES})
