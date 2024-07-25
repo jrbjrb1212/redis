@@ -19,6 +19,7 @@ class RESPHandler {
         std::string handleRPUSH(std::vector<std::string> &parsedReq);
         std::string handleSAVE(std::vector<std::string> &parsedReq);
         std::string handleKEYS(std::vector<std::string> &parsedReq);
+        std::string handleFLUSHALL(std::vector<std::string> &parsedReq);
 
     public:        
         RESPHandler(RedisStore &store) : dataStore(store) {};

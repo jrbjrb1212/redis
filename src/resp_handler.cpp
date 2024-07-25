@@ -143,6 +143,14 @@ std::string RESPHandler::handleKEYS(std::vector<std::string> &parsedReq){
     return response;
 }
 
+std::string RESPHandler::handleFLUSHALL(std::vector<std::string> &parsedReq){
+    if (parsedReq.size() != 1)
+        return genError("syntax error");
+
+    dataStore.redisCache.clear();
+    return "+OK\r\n";
+}
+
 
 // Routing function
 // - takes a vector of parsed arguments from the redis-cli
@@ -205,6 +213,15 @@ std::string RESPHandler::handleMsg(std::vector<std::string> &parsedReq){
     else if (extractCommand == "KEYS")
     {
         RESPResponse = handleKEYS(parsedReq);
+    }
+    else if (extractCommand == "FLUSHALL")
+    {
+        RESPResponse = handleFLUSHALL(parsedReq);
+    }
+    else
+    {
+        std::string message = "unknown command \'" + extractCommand + "\'";
+        RESPResponse = genError(message);
     }
 
     return RESPResponse;
