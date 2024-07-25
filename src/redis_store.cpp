@@ -1,14 +1,14 @@
 #include "redis_store.hpp"
 
 
-bool RedisStore::setStoreKey(std::string key, std::string value){
+bool RedisStore::setStoreKey(std::string &key, std::string &value){
     redisCache[key] = {value};
     return true;
 }
 
 
 // TODO: A better solution not using a bandaid struct exists
-storeKeyInfo RedisStore::getStoreKey(std::string key){
+storeKeyInfo RedisStore::getStoreKey(std::string &key){
     storeKeyInfo value;
     
     if (redisCache.find(key) == redisCache.end())
@@ -63,7 +63,8 @@ storeKeyInfo RedisStore::updateStoreValue(std::string key, size_t valUpdate){
         return keyInfo;
 
     ssize_t newVal = stoi(keyInfo.value) + valUpdate;
-    setStoreKey(key, std::to_string(newVal));
+    std::string newValStr = std::to_string(newVal);
+    setStoreKey(key, newValStr);
 
     return keyInfo;
 } 
@@ -93,4 +94,14 @@ std::unordered_map<std::string, ssize_t> RedisStore::getStoreStats(){
     storeStats["Current Bytes"] = currBytes;
     
     return storeStats;
+}
+
+
+// TODO: delete later
+void RedisStore::ping(){
+    std::cout << "Store PING" << std::endl;
+}
+
+ssize_t RedisStore::size(){
+    return redisCache.size();
 } 

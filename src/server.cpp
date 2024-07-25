@@ -9,6 +9,7 @@
 #include <netinet/ip.h>
 
 #include "common.hpp"
+#include "redis_store.hpp"
 #include "resp_parser.hpp"
 #include "resp_handler.hpp"
 #include "helpful.hpp"
@@ -35,7 +36,7 @@ static void die(const char *msg) {
 // - Write the result back to the client file descriptor
 //      - I'll be able to see this using the redis-cli
 // Future TODO: handle arbitrary large requests
-void handleClientRequest(int clientFd){
+void handleClientRequest(int clientFd, RedisStore &dataStore){
 
     // Read from client
     // - current max request is 256
@@ -47,7 +48,7 @@ void handleClientRequest(int clientFd){
         return;
     }
     RESPParser parser;
-    RESPHandler handler;
+    RESPHandler handler(dataStore);
     std::string respMsg = rbuf;
     std::vector<std::string> parsedMsg = parser.deserialize(respMsg);
     
@@ -87,6 +88,8 @@ int main() {
     }
     printf("Server running on port %d...\n", PORT);
 
+    RedisStore dataStore;
+
     while (true) {
         // accept
         struct sockaddr_in client_addr = {};
@@ -95,7 +98,7 @@ int main() {
         if (connfd < 0) {
             continue;   // error
         }
-        handleClientRequest(connfd);
+        handleClientRequest(connfd, dataStore);
 
         close(connfd);
     }

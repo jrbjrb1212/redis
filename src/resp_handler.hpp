@@ -1,8 +1,11 @@
 #pragma once
 #include "common.hpp"
+#include "redis_store.hpp"
+
 
 class RESPHandler {
     private:
+        RedisStore &dataStore;
         std::string genError(std::string errorMsg);
         std::string handlePING(std::vector<std::string> &parsedReq);
         std::string handleECHO(std::vector<std::string> &parsedReq);
@@ -15,11 +18,10 @@ class RESPHandler {
         std::string handleLPUSH(std::vector<std::string> &parsedReq);
         std::string handleRPUSH(std::vector<std::string> &parsedReq);
         std::string handleSAVE(std::vector<std::string> &parsedReq);
+        std::string handleKEYS(std::vector<std::string> &parsedReq);
 
     public:        
-        RESPHandler(){
-
-        };
+        RESPHandler(RedisStore &store) : dataStore(store) {};
       
-        std::string handleMsg(std::vector<std::string> &parsedReq);      
+        std::string handleMsg(std::vector<std::string> &parsedReq);    
 };
