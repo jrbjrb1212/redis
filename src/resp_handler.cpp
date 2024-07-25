@@ -9,6 +9,7 @@ std::string getArgFromBulkString(std::string &bulkString){
     return key;
 }
 
+
 std::string RESPHandler::genError(std::string errormsg){
     return "-" + errormsg + CLRF;
 }
@@ -51,63 +52,130 @@ std::string RESPHandler::handleGET(std::vector<std::string> &parsedReq){
 
 
 std::string RESPHandler::handleSET(std::vector<std::string> &parsedReq){
-    std::string &keyUnclean = parsedReq[1];
-    std::string &valUnclean = parsedReq[2];
+    if (parsedReq.size() != 3)
+        return genError("syntax error");
     
-    size_t keyCLRF = keyUnclean.find(CLRF);
-    size_t valueCLRF = valUnclean.find(CLRF);
+    std::string key = getArgFromBulkString(parsedReq[1]);
+    std::string value = getArgFromBulkString(parsedReq[2]);
 
-    ssize_t keyLen = stoi(keyUnclean.substr(0, keyCLRF));
-    ssize_t valueLen = stoi(valUnclean.substr(0, valueCLRF));
-
-    std::string key = keyUnclean.substr(keyCLRF+2, keyLen);
-    std::string value = valUnclean.substr(valueCLRF+2, valueLen);
-
-    std::cout << "key: " << key << std::endl;
-    std::cout << "value: " << value << std::endl;
-
-    
     dataStore.setStoreKey(key, value);
-    storeKeyInfo dataSaved = dataStore.getStoreKey(key);
-    std::cout << "Stored value: " << dataSaved.value << std::endl;
 
     return "+OK\r\n";
 }
 
 
 std::string RESPHandler::handleEXISTS(std::vector<std::string> &parsedReq){
-    std::cout << "Not Currently Working" << std::endl;
+    if (parsedReq.size() != 2)
+        return genError("syntax error");
+
+    
+    std::string key = getArgFromBulkString(parsedReq[1]);
+    bool isContained = dataStore.checkStoreKey(key);
+    std::string response = ":" + std::to_string(isContained) + "\r\n"; 
+    return response;
 }
 
 
+// TODO: handle deletion of string arguments 1 through N
+// - would need to parse n arguments in a loop
 std::string RESPHandler::handleDEL(std::vector<std::string> &parsedReq){
-    std::cout << "Not Currently Working" << std::endl;
+    if (parsedReq.size() != 2)
+        return genError("syntax error");
+
+    
+    std::string key = getArgFromBulkString(parsedReq[1]);
+    bool isDeleted = dataStore.delStoreKey(key);
+    std::string response = ":" + std::to_string(isDeleted) + "\r\n"; 
+    return response;
 }
 
 
-std::string RESPHandler::handleINCR(std::vector<std::string> &parsedReq){
-    std::cout << "Not Currently Working" << std::endl;
+std::string RESPHandler::handleINCRorDECR(std::vector<std::string> &parsedReq){
+    if (parsedReq.size() != 2)
+        return genError("wrong number of arguments for command");
+     
+    std::string key = getArgFromBulkString(parsedReq[1]);
+    storeKeyInfo value = dataStore.updateStoreValue(key, 1);
+
+    if (value.listType)
+        return genError("Operation against a key holding the wrong kind of value");
+    
+    std::string response = ":" + value.value + CLRF; 
+    return response;
 }
 
-
-std::string RESPHandler::handleDECR(std::vector<std::string> &parsedReq){
-    std::cout << "Not Currently Working" << std::endl;
-}
 
 
 std::string RESPHandler::handleLPUSH(std::vector<std::string> &parsedReq){
-    std::cout << "Not Currently Working" << std::endl;
+    if (parsedReq.size() != 3)
+        return genError("wrong number of arguments for 'LPUSH' command");
+    
+    std::string key = getArgFromBulkString(parsedReq[1]);
+    std::string value = getArgFromBulkString(parsedReq[2]);
+
+    bool insertAtFront = true;
+    ssize_t numElements = dataStore.insertIntoStoreRange(key, value, insertAtFront);
+    
+    std::string response = ":" + std::to_string(numElements) + CLRF;
+    return response;
 }
 
 
 std::string RESPHandler::handleRPUSH(std::vector<std::string> &parsedReq){
-    std::cout << "Not Currently Working" << std::endl;
+    if (parsedReq.size() != 3)
+        return genError("wrong number of arguments for 'RPUSH' command");
+    
+    std::string key = getArgFromBulkString(parsedReq[1]);
+    std::string value = getArgFromBulkString(parsedReq[2]);
+
+    bool insertAtFront = false;
+    ssize_t numElements = dataStore.insertIntoStoreRange(key, value, insertAtFront);
+    
+    std::string response = ":" + std::to_string(numElements) + CLRF;
+    return response;
+}
+
+
+std::string RESPHandler::handleLRange(std::vector<std::string> &parsedReq){
+    if (parsedReq.size() != 4)
+        return genError("wrong number of arguments for 'range' command");
+    
+    std::string key = getArgFromBulkString(parsedReq[1]);
+    std::string startStr = getArgFromBulkString(parsedReq[2]);
+    std::string endStr = getArgFromBulkString(parsedReq[3]);
+
+    std::vector<std::string> &valueListRef = dataStore.getListRef(key);
+
+    ssize_t start = stoi(startStr);
+    ssize_t end = stoi(endStr);
+    if (start < 0)
+        start = valueListRef.size() + start;
+    
+    if (end < 0)
+        end = valueListRef.size() + end;
+    
+    start = std::max(start, ssize_t(0));
+    end = std::min(end, ssize_t(valueListRef.size()-1));
+
+    ssize_t numElements = end - start + 1;
+
+    if (numElements <= 0)
+        return "*0\r\n";
+    
+    std::string response = "*" + std::to_string(numElements) + CLRF;
+    for (int i=start; i<=end; i++){ 
+        response += "$" + std::to_string(valueListRef[i].size()) + CLRF + valueListRef[i] + CLRF;
+    }
+
+    return response;
 }
 
 
 std::string RESPHandler::handleSAVE(std::vector<std::string> &parsedReq){
     std::cout << "Not Currently Working" << std::endl;
+    return genError("Not Implemented");
 }
+
 
 std::string RESPHandler::handleKEYS(std::vector<std::string> &parsedReq){
     // get size of redis dictionary
@@ -142,6 +210,7 @@ std::string RESPHandler::handleKEYS(std::vector<std::string> &parsedReq){
 
     return response;
 }
+
 
 std::string RESPHandler::handleFLUSHALL(std::vector<std::string> &parsedReq){
     if (parsedReq.size() != 1)
@@ -190,17 +259,17 @@ std::string RESPHandler::handleMsg(std::vector<std::string> &parsedReq){
     {
         RESPResponse = handleDEL(parsedReq);
     }
-    else if (extractCommand == "INCR")
+    else if (extractCommand == "INCR" || extractCommand == "DECR")
     {
-        RESPResponse = handleINCR(parsedReq);
-    }
-    else if (extractCommand == "DECR")
-    {
-        RESPResponse = handleDECR(parsedReq);
+        RESPResponse = handleINCRorDECR(parsedReq);
     }
     else if (extractCommand == "LPUSH")
     {
         RESPResponse = handleLPUSH(parsedReq);
+    }
+    else if (extractCommand == "LRANGE")
+    {
+        RESPResponse = handleLRange(parsedReq);
     }
     else if (extractCommand == "RPUSH")
     {

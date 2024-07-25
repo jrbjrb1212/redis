@@ -15,6 +15,7 @@ class RedisStore {
         size_t saveTimer = 300; // default create snap shot every 5 minutes 
         size_t cacheHits = 0;
         size_t cacheMisses = 0;
+        std::vector<std::string> emptyVec;
         
         bool checkCacheIsOnDisk();
         std::unordered_map<std::string, std::string> loadCacheFromDisk();
@@ -30,12 +31,15 @@ class RedisStore {
 
         };
 
+        // TODO: make all of these references to avoid string copying
         std::unordered_map<std::string, std::vector<std::string>> redisCache;
         bool setStoreKey(std::string &key, std::string &value);
         storeKeyInfo getStoreKey(std::string &key);
         bool checkStoreKey(std::string key);
         bool delStoreKey(std::string key);
         storeKeyInfo updateStoreValue(std::string key, size_t valUpdate); 
+        ssize_t insertIntoStoreRange(std::string &key, std::string &value, bool leftOrRight);
+        std::vector<std::string>& getListRef(std::string &key);
         bool saveStore();
         std::unordered_map<std::string, ssize_t> getStoreStats(); 
         void ping(); 

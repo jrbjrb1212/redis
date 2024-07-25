@@ -59,15 +59,52 @@ bool RedisStore::delStoreKey(std::string key){
 storeKeyInfo RedisStore::updateStoreValue(std::string key, size_t valUpdate){
     storeKeyInfo keyInfo = getStoreKey(key);
 
-    if (keyInfo.keyPresent == false || keyInfo.listType == true)
+    if (keyInfo.listType == true)
         return keyInfo;
 
-    ssize_t newVal = stoi(keyInfo.value) + valUpdate;
+    ssize_t newVal;
+    if (!keyInfo.keyPresent)
+        newVal = valUpdate;
+    else
+        newVal = stoi(keyInfo.value) + valUpdate;
+
     std::string newValStr = std::to_string(newVal);
     setStoreKey(key, newValStr);
+    keyInfo.value = newValStr;
 
     return keyInfo;
 } 
+
+
+std::vector<std::string>& RedisStore::getListRef(std::string &key){
+    if (checkStoreKey(key))
+        return redisCache[key];
+    
+    return emptyVec;
+}
+
+
+ssize_t RedisStore::insertIntoStoreRange(std::string &key, std::string &value, bool leftInsert){
+    storeKeyInfo keyInfo = getStoreKey(key);
+    
+    // if the key does not exist, create a new one 
+    if (!keyInfo.keyPresent)
+    {
+        setStoreKey(key, value);
+        return 1;
+    }
+
+    std::vector<std::string> &valueListRef = getListRef(key);
+
+    // if the key does exist, insert at the front or back of vector
+    if (leftInsert)
+        valueListRef.insert(valueListRef.begin(), value);
+    else
+        valueListRef.push_back(value);
+
+    return valueListRef.size();
+}
+
 
 // Redis database dumps are called dump.rbd
 // TODO: Can add onto this by saving to a user defined location
