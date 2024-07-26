@@ -2,7 +2,6 @@
 #include "common.hpp"
 #include "redis_store.hpp"
 
-
 class RESPHandler {
     private:
         RedisStore &dataStore;

@@ -1,6 +1,7 @@
 #pragma once
 
 #define CLRF "\r\n"
+#define dataSaveName "redis.json"
 
 #include <vector>
 #include <string>
@@ -10,3 +11,9 @@
 #include <cctype>
 #include <unordered_map>
 #include <filesystem>
+#include <thread>
+#include <fstream>
+#include <nlohmann/json.hpp>
+#include <atomic>
+
+using json = nlohmann::json;

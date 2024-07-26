@@ -111,14 +111,48 @@ ssize_t RedisStore::insertIntoStoreRange(std::string &key, std::string &value, b
 bool RedisStore::checkCacheIsOnDisk(){
     std::filesystem::path currentPath = std::filesystem::current_path();
     
-    std::filesystem::path filePath = currentPath / "dump.rbd";
+    std::filesystem::path filePath = currentPath / dataSaveName;
     
     return std::filesystem::exists(filePath);
 }
 
-// std::unordered_map<std::string, std::string> RedisStore::loadCacheFromDisk();
-// bool RedisStore::writeCacheToDisk();
-// bool RedisStore::saveStore();
+
+bool RedisStore::writeCacheToDisk(){
+    json j;
+    j["currBytes"] = currBytes;
+    j["maxBytes"] = maxBytes;
+    j["saveTimer"] = saveTimer;
+    j["redisCache"] = redisCache;
+
+    std::ofstream file(dataSaveName);
+    if (file.is_open()) {
+        file << j.dump(1);
+        file.close();
+    } else {
+        std::cerr << "Unable to open file";
+        return false;
+    }
+
+    return true;
+}
+
+
+void RedisStore::loadCacheFromDisk(){
+    
+    std::ifstream f(dataSaveName);
+    json data = json::parse(f);
+
+    currBytes = data["currBytes"];
+    maxBytes = data["maxBytes"];
+    saveTimer = data["saveTimer"];
+    for (auto &keyVal: data["redisCache"].items())
+    {
+        std::string key = keyVal.key();
+        std::vector<std::string> value = keyVal.value().get<std::vector<std::string>>();
+        redisCache[key] = value;            
+    }
+
+}
 
 
 // Return stats about the current size of the cache and 

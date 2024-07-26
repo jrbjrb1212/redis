@@ -172,8 +172,12 @@ std::string RESPHandler::handleLRange(std::vector<std::string> &parsedReq){
 
 
 std::string RESPHandler::handleSAVE(std::vector<std::string> &parsedReq){
-    std::cout << "Not Currently Working" << std::endl;
-    return genError("Not Implemented");
+    bool isGoodSave = dataStore.writeCacheToDisk();
+    
+    if (!isGoodSave)
+        return genError("could not save the redis db");
+    
+    return "+OK\r\n";
 }
 
 
