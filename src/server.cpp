@@ -15,6 +15,7 @@
 #include "helpful.hpp"
 
 const size_t PORT = 6379;
+std::atomic<bool> keepRunning(true);
 
 static void msg(const char *msg) {
     fprintf(stderr, "%s\n", msg);
@@ -58,6 +59,19 @@ void handleClientRequest(int clientFd, RedisStore &dataStore){
     std::cout << "Response: " << response << std::endl;
 
     write(clientFd, response.c_str(), response.size());
+    close(clientFd);
+}
+
+
+void saveInterval(RedisStore &dataStore){
+    std::cout << "Save thread started" << std::endl;
+    size_t saveInterval = dataStore.saveTimer;
+    while(keepRunning){
+        std::this_thread::sleep_for(std::chrono::seconds(saveInterval));
+        if (!keepRunning) 
+            break;
+        dataStore.writeCacheToDisk();
+    }
 }
 
 
@@ -89,6 +103,9 @@ int main() {
     printf("Server running on port %d...\n", PORT);
 
     RedisStore dataStore;
+    std::thread saveThread([&]() {
+        saveInterval(dataStore);
+    });
 
     while (true) {
         // accept
@@ -98,10 +115,18 @@ int main() {
         if (connfd < 0) {
             continue;   // error
         }
-        handleClientRequest(connfd, dataStore);
 
-        close(connfd);
+        handleClientRequest(connfd, dataStore);
+        // std::thread client_thread([&]() {
+        //     handleClientRequest(connfd, dataStore);
+        // });
+      
+        // // Detach the thread to allow it to run independently
+        // client_thread.detach();
     }
+
+    keepRunning = false;
+    saveThread.join();
 
     return 0;
 }
